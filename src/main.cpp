@@ -1,42 +1,38 @@
-#include <glad/glad.h>
-#include <GLFW/glfw3.h>
-
-#include <iostream>
-#include <chrono>
+#include "Shader.h"
 
 int WIDTH = 640;
 int HEIGHT = 480;
 
-const char* vertexShaderSource = 
-"#version 330 core\n"
-"layout (location = 0) in vec3 aPos;\n"
-"out vec4 vertexColor;\n"
-"void main()\n"
-"{\n"
-"   gl_Position = vec4(aPos.x, aPos.y, aPos.z, 1.0);\n"
-"   vertexColor = vec4(1.0, 0.5, 0.7, 1.0);\n"
-"}\n\0"
-;
-
-const char* fragmentShaderSource1 = 
-"#version 330 core\n"
-"out vec4 FragColor;\n"
-"in vec4 vertexColor;\n"
-"void main()\n"
-"{\n"
-"   FragColor = vertexColor;\n"
-"}\n\0"
-;
-
-const char* fragmentShaderSource2 = 
-"#version 330 core\n"
-"out vec4 FragColor;\n"
-"uniform vec4 myColor;\n"
-"void main()\n"
-"{\n"
-"   FragColor = myColor;\n"
-"}\n\0"
-;
+//const char* vertexShaderSource = 
+//"#version 330 core\n"
+//"layout (location = 0) in vec3 aPos;\n"
+//"out vec4 vertexColor;\n"
+//"void main()\n"
+//"{\n"
+//"   gl_Position = vec4(aPos.x, aPos.y, aPos.z, 1.0);\n"
+//"   vertexColor = vec4(1.0, 0.5, 0.7, 1.0);\n"
+//"}\n\0"
+//;
+//
+//const char* fragmentShaderSource1 = 
+//"#version 330 core\n"
+//"out vec4 FragColor;\n"
+//"in vec4 vertexColor;\n"
+//"void main()\n"
+//"{\n"
+//"   FragColor = vertexColor;\n"
+//"}\n\0"
+//;
+//
+//const char* fragmentShaderSource2 = 
+//"#version 330 core\n"
+//"out vec4 FragColor;\n"
+//"uniform vec4 myColor;\n"
+//"void main()\n"
+//"{\n"
+//"   FragColor = myColor;\n"
+//"}\n\0"
+//;
 
 const char* multicoloredVertexShaderSource =
 "#version 330 core\n"
@@ -146,9 +142,12 @@ int main(void)
     std::cout << "Render:\t" << glGetString(GL_RENDERER) << std::endl;
     std::cout << "OpenGL:\t" << glGetString(GL_VERSION) << std::endl;
 
-    GLint shaderProgram1 = create_shader_program(&vertexShaderSource, &fragmentShaderSource1);
-    GLint shaderProgram2 = create_shader_program(&vertexShaderSource, &fragmentShaderSource2);
+    //GLint shaderProgram1 = create_shader_program(&vertexShaderSource, &fragmentShaderSource1);
+    //GLint shaderProgram2 = create_shader_program(&vertexShaderSource, &fragmentShaderSource2);
     GLint shaderProgramMulticolored = create_shader_program(&multicoloredVertexShaderSource, &multicoloredFragmentShaderSource);
+
+    Shader common_shader1("../../src/shaders/vertex.hlsl", "../../src/shaders/fragment1.hlsl");
+    Shader common_shader2("../../src/shaders/vertex.hlsl", "../../src/shaders/fragment2.hlsl");
 
     GLfloat vertices[] = {
         -0.9f,  -0.9f,  0.0f,
@@ -271,20 +270,20 @@ int main(void)
         // color change
         GLfloat timeValue = static_cast<GLfloat>(glfwGetTime());
         GLfloat greenValue = (sin(timeValue) / 2.0f) + 0.5f;
-        GLint vertexColorLocation = glGetUniformLocation(shaderProgram2, "myColor");
-        glUseProgram(shaderProgram2);
+        GLint vertexColorLocation = glGetUniformLocation(common_shader2.get(), "myColor");
+        common_shader2.use();
         glUniform4f(vertexColorLocation, 0.0f, greenValue, 0.0f, 1.0f);
         //
 
-        glUseProgram(shaderProgram1);
+        common_shader1.use();
         glBindVertexArray(VAOs[0]);
         glDrawArrays(GL_TRIANGLES, 0, 3);
 
-        glUseProgram(shaderProgram2);
+        common_shader2.use();
         glBindVertexArray(VAOs[1]);
         glDrawArrays(GL_TRIANGLES, 0, 3);
         
-        glUseProgram(shaderProgram1);
+        common_shader1.use();
         glBindVertexArray(VAO);
         glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
         
