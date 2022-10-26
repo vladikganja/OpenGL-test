@@ -3,59 +3,6 @@
 int WIDTH = 640;
 int HEIGHT = 480;
 
-//const char* vertexShaderSource = 
-//"#version 330 core\n"
-//"layout (location = 0) in vec3 aPos;\n"
-//"out vec4 vertexColor;\n"
-//"void main()\n"
-//"{\n"
-//"   gl_Position = vec4(aPos.x, aPos.y, aPos.z, 1.0);\n"
-//"   vertexColor = vec4(1.0, 0.5, 0.7, 1.0);\n"
-//"}\n\0"
-//;
-//
-//const char* fragmentShaderSource1 = 
-//"#version 330 core\n"
-//"out vec4 FragColor;\n"
-//"in vec4 vertexColor;\n"
-//"void main()\n"
-//"{\n"
-//"   FragColor = vertexColor;\n"
-//"}\n\0"
-//;
-//
-//const char* fragmentShaderSource2 = 
-//"#version 330 core\n"
-//"out vec4 FragColor;\n"
-//"uniform vec4 myColor;\n"
-//"void main()\n"
-//"{\n"
-//"   FragColor = myColor;\n"
-//"}\n\0"
-//;
-
-const char* multicoloredVertexShaderSource =
-"#version 330 core\n"
-"layout (location = 0) in vec3 aPos;\n"
-"layout (location = 1) in vec3 aColor;\n"
-"out vec3 ourColor;\n"
-"void main()\n"
-"{\n"
-"   gl_Position = vec4(aPos, 1.0);\n"
-"   ourColor = aColor;\n"
-"}\n\0"
-;
-
-const char* multicoloredFragmentShaderSource =
-"#version 330 core\n"
-"out vec4 FragColor;\n"
-"in vec3 ourColor;\n"
-"void main()\n"
-"{\n"
-"   FragColor = vec4(ourColor, 1.0);\n"
-"}\n\0"
-;
-
 void framebuffer_size_callback(GLFWwindow* window, int width, int height) {
     if (window) {
         glViewport(0, 0, width, height);
@@ -74,44 +21,6 @@ extern "C" {
     //__declspec(dllexport) int AmdPowerXpressRequestHighPerformance = 1;
 }
 #endif
-
-GLint create_shader_program(const char** vertex_shader, const char** fragment_shader) {
-    GLint success;
-    GLchar infoLog[512];
-
-    GLint vertexShader = glCreateShader(GL_VERTEX_SHADER);
-    glShaderSource(vertexShader, 1, vertex_shader, NULL);
-    glCompileShader(vertexShader);
-    glGetShaderiv(vertexShader, GL_COMPILE_STATUS, &success);
-    if (!success) {
-        glGetShaderInfoLog(vertexShader, 512, NULL, infoLog);
-        std::cout << "ERROR::SHADER::VERTEX::COMPILATION_FAILED\n" << infoLog << std::endl;
-    }
-
-    GLint fragmentShader = glCreateShader(GL_FRAGMENT_SHADER);
-    glShaderSource(fragmentShader, 1, fragment_shader, NULL);
-    glCompileShader(fragmentShader);
-    glGetShaderiv(fragmentShader, GL_COMPILE_STATUS, &success);
-    if (!success) {
-        glGetShaderInfoLog(fragmentShader, 512, NULL, infoLog);
-        std::cout << "ERROR::SHADER::FRAGMENT::COMPILATION_FAILED\n" << infoLog << std::endl;
-    }
-
-    GLint shaderProgram = glCreateProgram();
-    glAttachShader(shaderProgram, vertexShader);
-    glAttachShader(shaderProgram, fragmentShader);
-    glLinkProgram(shaderProgram);
-    glGetProgramiv(shaderProgram, GL_LINK_STATUS, &success);
-    if (!success) {
-        glGetProgramInfoLog(shaderProgram, 512, NULL, infoLog);
-        std::cout << "ERROR::SHADER::PROGRAM::LINKING_FAILED\n" << infoLog << std::endl;
-    }
-
-    glDeleteShader(vertexShader);
-    glDeleteShader(fragmentShader);
-
-    return shaderProgram;
-}
 
 int main(void)
 {
@@ -140,14 +49,11 @@ int main(void)
     }
     std::cout << "Vendor:\t" << glGetString(GL_VENDOR) << std::endl;
     std::cout << "Render:\t" << glGetString(GL_RENDERER) << std::endl;
-    std::cout << "OpenGL:\t" << glGetString(GL_VERSION) << std::endl;
-
-    //GLint shaderProgram1 = create_shader_program(&vertexShaderSource, &fragmentShaderSource1);
-    //GLint shaderProgram2 = create_shader_program(&vertexShaderSource, &fragmentShaderSource2);
-    GLint shaderProgramMulticolored = create_shader_program(&multicoloredVertexShaderSource, &multicoloredFragmentShaderSource);
+    std::cout << "OpenGL:\t" << glGetString(GL_VERSION) << std::endl;    
 
     Shader common_shader1("../../src/shaders/vertex.hlsl", "../../src/shaders/fragment1.hlsl");
     Shader common_shader2("../../src/shaders/vertex.hlsl", "../../src/shaders/fragment2.hlsl");
+    Shader multicolored_shader("../../src/shaders/vertexMulticolored.hlsl", "../../src/shaders/fragmentMulticolored.hlsl");
 
     GLfloat vertices[] = {
         -0.9f,  -0.9f,  0.0f,
@@ -261,19 +167,30 @@ int main(void)
     auto time = std::chrono::high_resolution_clock::now();
     int f = 0;
     int shape = 0;
+    float offset = 0.0f;
+    int dx = 1;
+    GLfloat timeValue = 0.0f;
+    GLfloat timeDelta = 0.0f;
 
     while (!glfwWindowShouldClose(window)) {
         processInput(window);
 
         glClear(GL_COLOR_BUFFER_BIT);
 
+        timeDelta = timeValue;
+
         // color change
-        GLfloat timeValue = static_cast<GLfloat>(glfwGetTime());
+        timeValue = static_cast<GLfloat>(glfwGetTime());
+        timeDelta = timeValue - timeDelta;
         GLfloat greenValue = (sin(timeValue) / 2.0f) + 0.5f;
-        GLint vertexColorLocation = glGetUniformLocation(common_shader2.get(), "myColor");
-        common_shader2.use();
-        glUniform4f(vertexColorLocation, 0.0f, greenValue, 0.0f, 1.0f);
-        //
+        common_shader2.setColor(0.0f, greenValue, 0.0f, 1.0f);
+
+        // position change
+        common_shader2.setFloat("xOffset", offset);
+        offset += dx * timeDelta;
+        if (offset > 0.5f && dx > 0 || offset < 0.0f && dx < 0) {
+            dx *= -1;
+        }
 
         common_shader1.use();
         glBindVertexArray(VAOs[0]);
@@ -287,11 +204,11 @@ int main(void)
         glBindVertexArray(VAO);
         glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
         
-        glUseProgram(shaderProgramMulticolored);
+        multicolored_shader.use();
         glBindVertexArray(VAOmult);
         glDrawArrays(GL_TRIANGLES, 0, 3);
 
-        glUseProgram(shaderProgramMulticolored);
+        multicolored_shader.use();
         glBindVertexArray(VAOmrect);
         glDrawElements(GL_TRIANGLES, 9, GL_UNSIGNED_INT, 0);
 
@@ -309,8 +226,19 @@ int main(void)
         }
     }
 
+    // shold become RAII class
     glDeleteVertexArrays(2, VAOs);
+    glDeleteVertexArrays(1, &VAO);
+    glDeleteVertexArrays(1, &VAOmrect);
+    glDeleteVertexArrays(1, &VAOmult);
+
     glDeleteBuffers(2, VBOs);
+    glDeleteBuffers(1, &VBO);
+    glDeleteBuffers(1, &VBOmrect);
+    glDeleteBuffers(1, &VBOmult);
+
+    glDeleteBuffers(1, &EBO);
+    glDeleteBuffers(1, &EBOmrect);
     
     glfwTerminate();
 
